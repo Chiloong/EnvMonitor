@@ -26,10 +26,12 @@ jobs:
         env:
           API_KEY: ${{ secrets.API_KEY }}
           BARK_KEY: ${{ secrets.BARK_KEY }}
-- name: Commit state
-  run: |
-    git config --global user.name "bot"
-    git config --global user.email "bot@example.com"
-    git add pressure_state.txt
-    git commit -m "update pressure state" || echo "no changes"
-    git push
+
+      # ✅ 必须在 steps 里面（关键）
+      - name: Commit state
+        run: |
+          git config --global user.name "bot"
+          git config --global user.email "bot@example.com"
+          git add pressure_state.txt
+          git commit -m "update pressure state" || echo "no changes"
+          git push
