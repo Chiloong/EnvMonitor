@@ -78,7 +78,7 @@ def check_pressure():
         print(f"气压:{current_p}hPa 速率:{rate:.2f}hPa/h 等级:{level}")
 
         # 状态变化才提醒
-        if level != last_level and level in ["MEDIUM", "STRONG"]:
+        if True:
             direction = "📉下降" if rate < 0 else "📈上升"
 
             send_bark(
