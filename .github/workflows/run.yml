@@ -27,7 +27,6 @@ jobs:
           API_KEY: ${{ secrets.API_KEY }}
           BARK_KEY: ${{ secrets.BARK_KEY }}
 
-      # ✅ 必须在 steps 里面（关键）
       - name: Commit state
         run: |
           git config --global user.name "bot"
