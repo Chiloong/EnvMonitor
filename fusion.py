@@ -1,4 +1,3 @@
-# fusion.py
 import os
 import requests
 from config import *
@@ -82,70 +81,3 @@ def check_all():
 
     save_state(real_count)
     print(f"当前真实计数:{real_count} 上次:{last}")
-
-
-# pressure.py
-import time
-import requests
-from config import *
-
-def get_pressure():
-    data = requests.get(OPENWEATHER_URL, params={
-        "lat": LAT, "lon": LON, "appid": API_KEY, "units": "metric"
-    }, timeout=10).json()
-    return data["main"]["pressure"]
-
-def read_last():
-    try:
-        p, t = open(PRESSURE_FILE).read().split(",")
-        return float(p), float(t)
-    except:
-        return None
-
-def save(p, t):
-    open(PRESSURE_FILE, "w").write(f"{p},{t}")
-
-def get_pressure_signals():
-    now = time.time()
-    p = get_pressure()
-    low = p < 1000  # ✅ 阈值更新为1000 hPa
-    rate_trigger = False
-
-    last = read_last()
-    if last:
-        lp, lt = last
-        dt = (now - lt)/3600
-        if dt > 0:
-            rate = (p - lp)/dt
-            if abs(rate) > PRESSURE_RATE_THRESHOLD:
-                rate_trigger = True
-
-    save(p, now)
-    return low, rate_trigger, p
-
-
-# aqi.py
-import requests
-from config import *
-import time
-
-def get_aqi_signals():
-    try:
-        url = WAQI_URL.format(lat=LAT, lon=LON, token=WAQI_TOKEN)
-        res = requests.get(url, timeout=10).json()
-        if res.get("status") != "ok":
-            return False, False, 0
-        aqi = res["data"]["aqi"]
-        last_aqi_file = "aqi_last.txt"
-        try:
-            last_aqi = int(open(last_aqi_file).read().strip())
-        except:
-            last_aqi = aqi
-        dt = 1  # 简化：假设每次运行间隔约1小时
-        aqi_rate = (aqi - last_aqi)/dt
-        rise_flag = aqi_rate > 10  # AQI快速上升阈值，可调
-        high_flag = aqi >= AQI_THRESHOLD
-        open(last_aqi_file, "w").write(str(aqi))
-        return high_flag, rise_flag, aqi
-    except:
-        return False, False, 0
