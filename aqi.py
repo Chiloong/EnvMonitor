@@ -3,11 +3,17 @@ from config import *
 
 def get_aqi():
     try:
+        print("🔑 TOKEN:", WAQI_TOKEN)
+
         url = WAQI_URL.format(lat=LAT, lon=LON, token=WAQI_TOKEN)
+        print("🌐 AQI URL:", url)
+
         data = requests.get(url, timeout=10).json()
 
+        print("📦 返回数据:", data)
+
         if data.get("status") != "ok":
-            print("❌ AQI接口异常")
+            print("❌ AQI接口异常:", data)
             return False, 0
 
         aqi = data["data"]["aqi"]
