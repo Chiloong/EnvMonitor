@@ -8,6 +8,7 @@ on:
 jobs:
   run-script:
     runs-on: ubuntu-latest
+
     env:
       API_KEY: ${{ secrets.API_KEY }}
       BARK_KEY: ${{ secrets.BARK_KEY }}
@@ -29,3 +30,12 @@ jobs:
 
       - name: Run main.py
         run: python main.py
+
+      # ✅ 持久化状态（关键）
+      - name: Commit state
+        run: |
+          git config --global user.name "bot"
+          git config --global user.email "bot@example.com"
+          git add *.txt
+          git commit -m "update state" || echo "no changes"
+          git push
