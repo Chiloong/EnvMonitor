@@ -29,11 +29,16 @@ def save(p, t):
     open(PRESSURE_FILE, "w").write(f"{p},{t}")
 
 def get_pressure_signals():
-    """返回气压低和气压变化速率触发信号"""
+    """
+    返回：
+        low: 是否低于阈值
+        rate_trigger: 气压下降/上升速率是否超过阈值
+        current_pressure: 当前气压值（用于提醒显示）
+    """
     now = time.time()
     p = get_pressure()
     if p is None:
-        return False, False
+        return False, False, None
 
     # 🔹 调试输出当前气压
     print(f"📊 当前气压: {p} hPa  阈值: {PRESSURE_LOW} hPa")
@@ -51,4 +56,4 @@ def get_pressure_signals():
                 rate_trigger = True
 
     save(p, now)
-    return low, rate_trigger
+    return low, rate_trigger, p
