@@ -3,11 +3,21 @@ from config import *
 
 def get_aqi():
     try:
-        data = requests.get(AQI_URL, params={
-            "lat": LAT, "lon": LON, "appid": API_KEY
-        }, timeout=10).json()
+        url = WAQI_URL.format(lat=LAT, lon=LON, token=WAQI_TOKEN)
+        data = requests.get(url, timeout=10).json()
 
-        level = data["list"][0]["main"]["aqi"]  # 1~5
-        return level >= AQI_THRESHOLD
-    except:
-        return False
+        if data.get("status") != "ok":
+            print("❌ AQI接口异常")
+            return False, 0
+
+        aqi = data["data"]["aqi"]
+
+        trigger = aqi >= AQI_THRESHOLD
+
+        print(f"🟥 AQI:{aqi} 触发:{trigger}")
+
+        return trigger, aqi
+
+    except Exception as e:
+        print("❌ AQI Error:", e)
+        return False, 0
