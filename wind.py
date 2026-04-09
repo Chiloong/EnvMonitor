@@ -3,9 +3,16 @@ from config import *
 
 def get_wind():
     try:
-        data = requests.get(OPENWEATHER_URL, params={
-            "lat": LAT, "lon": LON, "appid": API_KEY, "units": "metric"
-        }, timeout=10).json()
+        data = requests.get(
+            OPENWEATHER_URL,
+            params={
+                "lat": LAT,
+                "lon": LON,
+                "appid": API_KEY,
+                "units": "metric"
+            },
+            timeout=10
+        ).json()
 
         wind = data.get("wind", {})
         speed = wind.get("speed", 0)
@@ -17,6 +24,10 @@ def get_wind():
             and (NE_MIN <= deg <= NE_MAX)
         )
 
+        print(f"🌬 风速:{speed} 风向:{deg} 阵风:{gust} 触发:{trigger}")
+
         return trigger
-    except:
+
+    except Exception as e:
+        print("❌ Wind Error:", e)
         return False
