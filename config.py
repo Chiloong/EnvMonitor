@@ -34,11 +34,10 @@ HUMIDITY_THRESHOLD = 60
 # ======================
 # 📁 状态
 # ======================
-STATE_FILE = "fusion_state.txt"
-SIGNAL_STATE_FILE = "signal_state.txt"
-RECOVERY_FILE = "recovery_state.txt"
+SIGNAL_STATE_FILE = "signal_state.json"
+RECOVERY_FILE = "recovery.json"
+RUN_STATE_FILE = "run_state.json"
 
-PRESSURE_FILE = "pressure_state.txt"
-AQI_STATE_FILE = "aqi_state.txt"
-
-RUN_STATE_FILE = "run_state.txt"
+TREND_PRESSURE_FILE = "pressure_trend.json"
+TREND_AQI_FILE = "aqi_trend.json"
+CACHE_FILE = "cache.json"
