@@ -27,10 +27,7 @@ def should_run(risk):
     now = time.time()
     last = read_json(RUN_STATE_FILE, {"t":0})["t"]
 
-    if risk:
-        interval = 300
-    else:
-        interval = 900
+    interval = 300 if risk else 900
 
     if now - last < interval:
         return False
@@ -50,10 +47,7 @@ def calc_trend(file, val, threshold):
 
     if dt > 0:
         rate = (val - last["v"]) / dt
-        if threshold < 0:
-            flag = rate <= threshold
-        else:
-            flag = rate >= threshold
+        flag = rate <= threshold if threshold < 0 else rate >= threshold
 
     save_json(file, {"v": val, "t": now})
     return flag
@@ -87,6 +81,7 @@ def check_all():
     }
 
     last = read_json(SIGNAL_STATE_FILE, {k:False for k in signals})
+    remind = read_json(REMIND_STATE_FILE, {})
     count = sum(signals.values())
 
     if not should_run(count > 0):
@@ -96,31 +91,7 @@ def check_all():
     now = time.time()
 
     # ======================
-    # 单项
-    # ======================
-    if not last["humidity"] and humidity:
-        msg = "🚨EnvAlert🚨\n✴️湿度🫧过高😶‍🌫️\n⛔️关闭新风▶️开除湿机"
-
-    elif not last["pressure"] and pressure_low:
-        msg = f"🚨气压过低 {p}"
-
-    elif not last["wind"] and wind:
-        msg = "🚨东北风触发"
-
-    elif not last["aqi"] and aqi_high:
-        msg = f"🚨高污染 AQI:{aqi}"
-
-    # ======================
-    # 趋势（保留）
-    # ======================
-    elif aqi_rise:
-        msg = f"⚠️AQI快速上升 {aqi}"
-
-    elif pressure_drop and wind:
-        msg = "⚠️气压下降+东北风"
-
-    # ======================
-    # 分级预警（覆盖单项）
+    # 🔴 分级预警（最高优先）
     # ======================
     if count == 2:
         msg = "🟡1️⃣级气象预警🚨"
@@ -130,7 +101,53 @@ def check_all():
         msg = "🔴3️⃣级气象预警🚨"
 
     # ======================
-    # 全局恢复（12h）
+    # 🔴 单项 + 心跳
+    # ======================
+    else:
+        for k in signals:
+            if signals[k]:
+
+                last_time = remind.get(k, 0)
+
+                # 首次触发
+                if not last[k]:
+                    if k == "humidity":
+                        msg = "🚨EnvAlert🚨\n✴️湿度🫧过高😶‍🌫️\n⛔️关闭新风▶️开除湿机"
+                    elif k == "pressure":
+                        msg = f"🚨气压过低 {p}"
+                    elif k == "wind":
+                        msg = "🚨东北风触发"
+                    elif k == "aqi":
+                        msg = f"🚨高污染 AQI:{aqi}"
+
+                    remind[k] = now
+                    break
+
+                # 心跳提醒
+                elif now - last_time > REMIND_INTERVAL:
+                    if k == "humidity":
+                        msg = f"⚠️湿度持续过高 {h}%"
+                    elif k == "pressure":
+                        msg = f"⚠️气压持续偏低 {p}"
+                    elif k == "wind":
+                        msg = "⚠️东北风持续"
+                    elif k == "aqi":
+                        msg = f"⚠️空气持续污染 AQI:{aqi}"
+
+                    remind[k] = now
+                    break
+
+    # ======================
+    # 🟢 恢复
+    # ======================
+    for k in signals:
+        if last[k] and not signals[k]:
+            msg = f"🟢{k}恢复"
+            remind[k] = 0
+            break
+
+    # ======================
+    # 🟢 全局恢复
     # ======================
     if count == 0 and any(last.values()):
         last_r = read_json(RECOVERY_FILE, {"t":0})["t"]
@@ -138,10 +155,17 @@ def check_all():
             msg = "🟢EnvAlert恢复正常"
             save_json(RECOVERY_FILE, {"t": now})
 
+    # ======================
+    # 📤 推送
+    # ======================
     if msg:
         send(msg)
 
     save_json(SIGNAL_STATE_FILE, signals)
+    save_json(REMIND_STATE_FILE, remind)
 
-    print("气压:", p, "湿度:", h, "AQI:", aqi)
+    # ======================
+    # 🔍 调试
+    # ======================
+    print("信号:", signals)
     print("风险数:", count)
