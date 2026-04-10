@@ -40,7 +40,7 @@ def save_recovery_time(t):
     open(RECOVERY_FILE, "w").write(str(t))
 
 # ======================
-# 🧠 信号级状态机（核心）
+# 🧠 信号级状态机
 # ======================
 def read_signal_state():
     try:
@@ -49,11 +49,56 @@ def read_signal_state():
         return {
             "aqi_high": False,
             "pressure_low": False,
-            "wind": False
+            "wind": False,
+            "humidity": False
         }
 
 def save_signal_state(s):
     open(SIGNAL_STATE_FILE, "w").write(json.dumps(s))
+
+# ======================
+# ⏱ 动态频率（新增）
+# ======================
+def should_run(risk):
+    now = time.time()
+    hour = time.localtime(now).tm_hour
+
+    try:
+        last = float(open("run_state.txt").read())
+    except:
+        last = 0
+
+    is_night = (hour >= 23 or hour < 7)
+
+    if risk:
+        interval = 300
+    elif is_night:
+        interval = 1800
+    else:
+        interval = 900
+
+    if now - last < interval:
+        print(f"⏭ 跳过 | 间隔:{interval}s")
+        return False
+
+    open("run_state.txt", "w").write(str(now))
+    return True
+
+# ======================
+# 🌫 湿度（新增）
+# ======================
+def get_humidity():
+    try:
+        import requests
+        res = requests.get(OPENWEATHER_URL, params={
+            "lat": LAT,
+            "lon": LON,
+            "appid": API_KEY,
+            "units": "metric"
+        }, timeout=10).json()
+        return res["main"]["humidity"]
+    except:
+        return 0
 
 # ======================
 # 🚀 主逻辑
@@ -63,26 +108,35 @@ def check_all():
     wind_t = get_wind()
     low_t, pressure_drop, current_pressure = get_pressure_signals()
     aqi_high, aqi_rise, aqi = get_aqi_signals()
+    humidity = get_humidity()
+    humidity_t = humidity > 60
 
     last_total = read_state()
     last_signals = read_signal_state()
 
-    # 当前状态
     current_signals = {
         "aqi_high": aqi_high,
         "pressure_low": low_t,
-        "wind": wind_t
+        "wind": wind_t,
+        "humidity": humidity_t
     }
 
     real_count = sum(current_signals.values())
+
+    # ⏱ 动态频率控制
+    if not should_run(real_count > 0):
+        return
 
     msg = None
     now = time.time()
 
     # ======================
-    # 🔴 新风险触发（逐项判断）
+    # 🔴 单项触发
     # ======================
-    if not last_signals["aqi_high"] and aqi_high:
+    if not last_signals["humidity"] and humidity_t:
+        msg = "🚨EnvAlert🚨\n✴️湿度🫧过高😶‍🌫️\n⛔️关闭新风▶️开除湿机"
+
+    elif not last_signals["aqi_high"] and aqi_high:
         msg = f"🚨高污染 AQI:{aqi}"
 
     elif not last_signals["pressure_low"] and low_t:
@@ -92,8 +146,11 @@ def check_all():
         msg = "🚨东北风触发 关闭新风"
 
     # ======================
-    # 🟢 单项恢复（只触发一次🔥）
+    # 🟢 单项恢复
     # ======================
+    elif last_signals["humidity"] and not humidity_t:
+        msg = f"🟢湿度恢复 当前:{humidity}%"
+
     elif last_signals["aqi_high"] and not aqi_high:
         msg = f"🟢AQI恢复正常 当前:{aqi}"
 
@@ -104,7 +161,17 @@ def check_all():
         msg = "🟢风向恢复"
 
     # ======================
-    # 🟢 全局恢复（12小时节流）
+    # 🟡 组合预警（新增）
+    # ======================
+    if real_count == 2:
+        msg = "🟡1️⃣级气象预警🚨"
+    elif real_count == 3:
+        msg = "🟠2️⃣级气象预警🚨"
+    elif real_count >= 4:
+        msg = "🔴3️⃣级气象预警🚨"
+
+    # ======================
+    # 🟢 全局恢复（12小时）
     # ======================
     elif last_total > 0 and real_count == 0:
         last_time = read_recovery_time()
@@ -113,7 +180,7 @@ def check_all():
             save_recovery_time(now)
 
     # ======================
-    # 🟡 趋势（不影响状态🔥）
+    # ⚠️ 趋势（保留）
     # ======================
     elif aqi_rise:
         msg = f"⚠️AQI快速上升 当前:{aqi}"
@@ -127,18 +194,13 @@ def check_all():
     if msg:
         send(msg)
 
-    # 保存状态
     save_state(real_count)
     save_signal_state(current_signals)
 
     # ======================
-    # 🔹 调试输出
+    # 🔍 调试
     # ======================
     print("------状态机------")
-    print("上次:", last_signals)
     print("当前:", current_signals)
-
-    print(f"🌬 风: {wind_t}")
-    print(f"📊 气压: {current_pressure} (阈值:{PRESSURE_LOW}) 低压:{low_t}")
-    print(f"📈 AQI: {aqi} 高污染:{aqi_high} 上升:{aqi_rise}")
-    print(f"计数: {real_count}")
+    print(f"湿度:{humidity} 触发:{humidity_t}")
+    print(f"风险数:{real_count}")
