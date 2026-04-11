@@ -30,21 +30,22 @@ def main():
         except:
             prev = None
 
-    events, dp_level = detect(data, prev)
+    # 🔥更新：新增 risk 返回
+    events, dp_level, risk = detect(data, prev)
 
     json.dump(data, open("storage/state.json", "w"))
 
-    risk = 50
-
+    # 🌙心跳
     if heartbeat_due(HEARTBEAT_INTERVAL):
         msg = format_heartbeat(data, dp_level, risk)
         log("heartbeat")
         send(msg)
         return
 
+    # 🚨事件
     if events:
         if can_trigger(str(events)):
-            msg = format_event(events, data, dp_level)
+            msg = format_event(events, data, dp_level, risk)
             log(f"event={events}")
             send(msg)
         else:
