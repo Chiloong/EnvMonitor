@@ -1,73 +1,81 @@
-print("=== RUNNING ===")
+def get_risk_color(risk):
+    if risk < 30:
+        return "🟢"
+    elif risk < 60:
+        return "🟡"
+    elif risk < 80:
+        return "🟠"
+    else:
+        return "🔴"
 
-from core.sensor    import fetch_all
-from core.engine    import detect
-from core.state     import can_trigger, mark_triggered, clear_event, heartbeat_due
-from core.formatter import format_event, format_heartbeat
-from core.notifier  import send
-from config         import HEARTBEAT_INTERVAL, EVENT_COOLDOWN
+def map_event(e):
+    mapping = {
+        "wind_ne":         "💨东北风",
+        "pressure_low":    "🌨️气压低",
+        "aqi_high":        "🌫️高污染",
+        "humidity_high":   "🫧高湿度",
+        "pressure_change": "〽️气压降",
+    }
+    return mapping.get(e, "")
 
-import json, os, tempfile
+def format_event(event, data, dp_level, risk):
+    """单事件独立格式"""
 
-def log(msg):
-    print(f"[EnvAlert] {msg}")
+    if event == "wind_ne":
+        return "\n".join([
+            "🚨EnvAlert🚨",
+            f"🏭发电厂↙️东北风{data['wind_scale']}级💨触发",
+            "⛔️关闭新风🟣颗粒过滤开大⬆️"
+        ])
 
-def load_prev():
-    path = "storage/state.json"
-    if not os.path.exists(path):
-        return None
-    try:
-        with open(path, "r") as f:
-            return json.load(f)
-    except:
-        return None
+    if event == "pressure_low":
+        return "\n".join([
+            "🚨EnvAlert🚨",
+            f"✴️气压🌨️过低🥱{data['pressure']}hPa"
+        ])
 
-def save_state(data):
-    os.makedirs("storage", exist_ok=True)
-    with tempfile.NamedTemporaryFile("w", dir="storage", delete=False, suffix=".tmp") as f:
-        json.dump(data, f)
-        tmp = f.name
-    os.replace(tmp, "storage/state.json")
+    if event == "pressure_change":
+        return f"✴️气压〽️骤变😣ΔP{dp_level}"
 
-def main():
-    log("🚀 start")
+    if event == "aqi_high":
+        return "\n".join([
+            "🚨EnvAlert🚨",
+            f"🟥高污染🌫️AQI{data['aqi']}😷"
+        ])
 
-    data = fetch_all()
-    log(f"data={data}")
-    if not data:
-        log("ERROR: empty data")
-        return
+    if event == "humidity_high":
+        return "\n".join([
+            "🚨EnvAlert🚨",
+            f"✴️湿度{data['humidity']}%😶‍🌫️过高💦",
+            "⛔️关闭新风▶️开除湿机"
+        ])
 
-    prev = load_prev()
-    events, dp_level, risk = detect(data, prev)
-    log(f"events={events} dp_level={dp_level} risk={risk}")
+    return ""
 
-    save_state(data)
+def format_combo(events, data, dp_level, risk):
+    """多事件组合推送"""
+    color = get_risk_color(risk)
 
-    # =========================
-    # 🌙 心跳
-    # =========================
-    if heartbeat_due(HEARTBEAT_INTERVAL):
-        msg = format_heartbeat(data, dp_level, risk)
-        log("heartbeat")
-        send(msg)
+    if len(events) >= 4:
+        level = "🔴3️⃣级气象预警🚨"
+    elif len(events) == 3:
+        level = "🟠2️⃣级气象预警🚨"
+    else:
+        level = "🟡1️⃣级气象预警🚨"
 
-    # =========================
-    # 🔥 单事件独立推送
-    # =========================
-    for e in events:
-        key = "single:" + e
-        if can_trigger(key, EVENT_COOLDOWN):
-            msg = format_event(e, data, dp_level, risk)  # 单个事件传入
-            log(f"single_event={e}")
-            if send(msg):
-                mark_triggered(key)
+    event_text = "".join(map_event(e) for e in events)
 
-    # 事件恢复后清除冷却状态
-    all_keys = ["wind_ne", "pressure_low", "aqi_high", "humidity_high", "pressure_change"]
-    for e in all_keys:
-        if e not in events:
-            clear_event("single:" + e)
+    return "\n".join([
+        level,
+        f"📉{dp_level}",
+        f"🧠风险{color}{risk}/100",
+        f"🌏异常：{event_text}"
+    ])
 
-if __name__ == "__main__":
-    main()
+def format_heartbeat(data, dp_level, risk):
+    color = get_risk_color(risk)
+    return "\n".join([
+        "🌏EnvAlert 定时播报",
+        f"气压:{data['pressure']} 湿度:{data['humidity']}% 风:{data['wind_dir']} AQI:{data['aqi']}",
+        f"📉{dp_level} 风险:{risk}{color}"
+    ])
