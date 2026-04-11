@@ -27,6 +27,11 @@ jobs:
           test -f main.py || (echo "missing main.py" && exit 1)
           test -f .github/workflows/run.yml || (echo "missing run.yml" && exit 1)
 
+      - name: Check core structure
+        run: |
+          test -d core || (echo "missing core/" && exit 1)
+          test -d storage || (echo "missing storage/" && exit 1)
+
       - name: Check repo state
         run: |
           echo "Guard check passed ✔"
