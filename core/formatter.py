@@ -1,4 +1,17 @@
+def get_risk_color(risk):
+    if risk < 30:
+        return "🟢"
+    elif risk < 60:
+        return "🟡"
+    elif risk < 80:
+        return "🟠"
+    else:
+        return "🔴"
+
+
 def format_event(events, data, dp_level, risk):
+
+    color = get_risk_color(risk)
 
     # 🔴多事件等级
     level = ""
@@ -10,10 +23,8 @@ def format_event(events, data, dp_level, risk):
     elif len(events) == 2:
         level = "🟡1️⃣级气象预警🚨"
 
-    # 🚨基础标题
     lines = ["🚨EnvAlert🚨"]
 
-    # 🔥事件映射（按优先级）
     if "wind_ne" in events:
         lines.append(f"🏭发电厂↙️东北风{data['wind_scale']}级💨")
 
@@ -26,26 +37,27 @@ def format_event(events, data, dp_level, risk):
     if "humidity_high" in events:
         lines.append(f"✴️湿度🫧过高😶‍🌫️{data['humidity']}%")
 
-    # 📉ΔP + 风险
-    lines.append(f"📉ΔP:{dp_level} 🧠风险{risk}")
+    # 📉ΔP + 风险（颜色版）
+    lines.append(f"📉ΔP:{dp_level} 🧠风险{color}{risk}/100")
 
-    # 🔴多事件覆盖（最高优先级）
+    # 🔴多事件覆盖
     if level:
         return "\n".join([
             level,
             f"📉{dp_level}",
-            f"🧠风险{risk}",
+            f"🧠风险{color}{risk}/100",
             f"🌏环境异常组合"
         ])
 
-    # 📏强制4行限制
     return "\n".join(lines[:4])
 
 
 def format_heartbeat(data, dp_level, risk):
 
+    color = get_risk_color(risk)
+
     return (
         "🌏EnvAlert☀️天气恢复正常✅\n"
         f"气压{data['pressure']} 湿度{data['humidity']}% 风{data['wind_dir']} AQI{data['aqi']}\n"
-        f"📉{dp_level} 🧠风险{risk}"
+        f"📉{dp_level} 🧠风险{color}{risk}/100"
     )
