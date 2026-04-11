@@ -22,26 +22,22 @@ def detect(data, prev):
     if data["humidity"] > HUMIDITY_HIGH:
         events.append("humidity_high")
 
-    # 📉ΔP（新增：作为事件）
-    dp_event = False
-
+    # 📉ΔP
     if prev:
         dp = data["pressure"] - prev["pressure"]
         dp_abs = abs(dp)
+
+        if dp_abs >= DP_STRONG:
+            events.append("pressure_change")
 
         if dp_abs < DP_WEAK:
             dp_level = "🟢弱波动"
         elif dp_abs < DP_STRONG:
             dp_level = "🟡中波动"
-            dp_event = True
         else:
             dp_level = "🔴强波动"
-            dp_event = True
     else:
         dp_level = "🟢弱波动"
-
-    if dp_event:
-        events.append("pressure_change")
 
     # 🧠风险评分
     risk = 0
@@ -57,6 +53,4 @@ def detect(data, prev):
     for e in events:
         risk += weight.get(e, 0)
 
-    risk = min(risk, 100)
-
-    return events, dp_level, risk
+    return events, dp_level, min(risk, 100)
