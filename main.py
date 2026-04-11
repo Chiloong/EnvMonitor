@@ -1,5 +1,3 @@
-print("=== RUNNING ===")
-
 from core.sensor import fetch_all
 from core.engine import detect
 from core.state import (
@@ -24,7 +22,6 @@ def main():
     log(f"data={data}")
 
     if not data:
-        log("ERROR empty data")
         return
 
     os.makedirs("storage", exist_ok=True)
@@ -36,38 +33,22 @@ def main():
         except:
             prev = None
 
-    # ===== 事件检测 =====
     events, dp_level, risk = detect(data, prev)
     print("events =", events)
 
-    # ===== 保存当前状态 =====
     json.dump(data, open("storage/state.json", "w"))
 
-    # ===== 心跳（不阻断后续逻辑）=====
     if heartbeat_due(HEARTBEAT_INTERVAL):
-        msg = format_heartbeat(data, dp_level, risk)
-        log("heartbeat")
-        send(msg)
+        send(format_heartbeat(data, dp_level, risk))
 
-    # =========================
-    # 🔥单事件推送（独立）
-    # =========================
+    # ===== 单事件 =====
     for e in events:
         if can_trigger_event(e):
-            msg = format_event([e], data, dp_level, risk)
+            send(format_event([e], data, dp_level, risk))
             log(f"single_event={e}")
-            send(msg)
 
-    # =========================
-    # 🔥组合事件推送
-    # =========================
+    # ===== 组合事件 =====
     if len(events) >= 2:
         if can_trigger_combo(events):
-            msg = format_event(events, data, dp_level, risk)
+            send(format_event(events, data, dp_level, risk))
             log(f"combo_event={events}")
-            send(msg)
-
-
-# 🔥关键：确保 main 被执行
-if __name__ == "__main__":
-    main()
