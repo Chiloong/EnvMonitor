@@ -1,1 +1,1 @@
-{"['pressure_low']": 1775904704.8652456, "['wind_ne', 'pressure_low']": 1775919261.3545432, "['wind_ne', 'pressure_low', 'humidity_high']": 1775926462.2448332}
+{"['pressure_low']": 1775904704.8652456, "['wind_ne', 'pressure_low']": 1775919261.3545432, "['wind_ne', 'pressure_low', 'humidity_high']": 1775926462.2448332, "wind_ne": 1775928904.9295678, "pressure_low": 1775928905.8407454, "humidity_high": 1775928906.69218, "combo:humidity_high,pressure_low,wind_ne": 1775928907.577858}
