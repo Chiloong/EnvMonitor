@@ -47,18 +47,33 @@ def main():
         log("heartbeat")
         send(msg)
 
-    # =========================
-    # 🔥统一事件推送（最终稳定版）
-    # =========================
-    if events:
+    # =====================================================
+    # 🔥1️⃣ 单事件推送（恢复）
+    # =====================================================
+    for e in events:
 
-        key = "combo:" + ",".join(sorted(events))
+        key = "single:" + e
 
         if can_trigger(key):
 
+            msg = format_event([e], data, dp_level, risk)
+
+            log(f"single_event={e}")
+
+            send(msg)
+
+    # =====================================================
+    # 🔥2️⃣ 组合事件推送（保留）
+    # =====================================================
+    if len(events) >= 2:
+
+        combo_key = "combo:" + ",".join(sorted(events))
+
+        if can_trigger(combo_key):
+
             msg = format_event(events, data, dp_level, risk)
 
-            log(f"event_push={events}")
+            log(f"combo_event={events}")
 
             send(msg)
 
