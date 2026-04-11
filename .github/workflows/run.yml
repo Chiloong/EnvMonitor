@@ -1,28 +1,25 @@
 name: EnvAlert
-
 on:
   workflow_dispatch:
   schedule:
-    - cron: "*/5 * * * *"   # 每5分钟运行一次
+    - cron: "*/30 * * * *"   # 改为每30分钟，节省 Actions 额度
 
 jobs:
   run-script:
     runs-on: ubuntu-latest
-
     permissions:
       contents: write
-
     env:
       QWEATHER_KEY: ${{ secrets.QWEATHER_KEY }}
-      WAQI_TOKEN: ${{ secrets.WAQI_TOKEN }}
-      BARK_KEY: ${{ secrets.BARK_KEY }}
+      WAQI_TOKEN:   ${{ secrets.WAQI_TOKEN }}
+      BARK_KEY:     ${{ secrets.BARK_KEY }}
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0   # 🔥关键修复：确保拿到最新storage状态
+          fetch-depth: 0
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -37,14 +34,10 @@ jobs:
       - name: Run main.py
         run: python main.py
 
-      # 🔥状态持久化（只存新系统）
       - name: Commit state
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions@github.com"
-
           git add storage/ || true
-
           git diff --cached --quiet || git commit -m "update env state"
-
           git push || echo "no changes"
