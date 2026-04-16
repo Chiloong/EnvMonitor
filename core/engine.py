@@ -6,7 +6,7 @@ from config import (
 def detect(data, prev):
     events = []
 
-    # 🌬️东北风（20°~70°，收窄避免把纯东风算入）
+    # 🌬️东北风（2–3级风电厂羽流影响最大）
     angle = data.get("wind_angle", 0)
     if 18 <= angle <= 78:
         events.append("wind_ne")
