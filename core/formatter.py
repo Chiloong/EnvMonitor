@@ -21,8 +21,8 @@ def map_event(e):
 def format_event(event, data, dp_level, risk):
     if event == "wind_ne":
         return "\n".join([
-            "🚨电厂空污SO₂NO₂🚨",
-            f"🏭发电厂↙️东北风{data['wind_scale']}级💨触发",
+            "↙️东北风{data['wind_scale']}级💨",
+            f"注意⚠️发电厂🏭有害气体🌋SO₂NO₂",
             "⛔️关闭新风🟣颗粒过滤开大⬆️"
         ])
     if event == "pressure_low":
